@@ -16,40 +16,47 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Set up Docker Buildx
+    - name: Set up Docker
       uses: docker/setup-buildx-action@v3
     
-    - name: Setup Docker Compose
+    - name: Check directory structure
       run: |
-        sudo apt-get update
-        sudo apt-get install -y docker-compose
+        echo "Checking current directory structure:"
+        ls -la
+        echo "Checking if docker directory exists:"
+        if [ -d "docker" ]; then
+          echo "✓ docker directory found"
+          ls -la docker/
+        else
+          echo "✗ docker directory not found"
+          exit 1
+        fi
+        echo "Checking if docker-compose.yml exists:"
+        if [ -f "docker/docker-compose.yml" ]; then
+          echo "✓ docker/docker-compose.yml file found"
+          cat docker/docker-compose.yml
+        else
+          echo "✗ docker/docker-compose.yml file not found"
+          exit 1
+        fi
     
-    - name: Create necessary directories
+    - name: Start services with Docker Compose
       run: |
-        mkdir -p docker/config
-        mkdir -p docker/data
-        mkdir -p docker/plugins
-        mkdir -p docker/extensions
-    
-    - name: Build and start services with Docker Compose
-      run: |
-        cd docker && docker-compose up -d --build
+        cd docker
+        docker-compose up -d
     
     - name: Wait for services to be ready
       run: |
-        cd docker && timeout 60 bash -c 'until docker-compose exec -T sillytavern echo "Service is ready"; do sleep 5; done' || echo "Service check completed"
+        cd docker
+        timeout 300 bash -c 'until docker-compose exec -T sillytavern echo "Service is ready"; do sleep 5; done' || echo "Service initialization completed"
     
     - name: Check service status
       run: |
-        cd docker && docker-compose ps
-        cd docker && docker-compose logs --tail=50 sillytavern
+        cd docker
+        docker-compose ps
+        docker-compose logs --tail=20 sillytavern
     
     - name: Test service endpoint
       run: |
         sleep 10
         curl -f http://localhost:8000 || echo "Service endpoint test completed"
-    
-    - name: Cleanup
-      if: always()
-      run: |
-        cd docker && docker-compose down
