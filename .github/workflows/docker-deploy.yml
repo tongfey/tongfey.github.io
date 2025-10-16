@@ -31,30 +31,45 @@ jobs:
           echo "✗ docker directory not found"
           exit 1
         fi
-        echo "Checking if docker-compose.yml exists:"
-        if [ -f "docker/docker-compose.yml" ]; then
-          echo "✓ docker/docker-compose.yml file found"
-          cat docker/docker-compose.yml
-        else
-          echo "✗ docker/docker-compose.yml file not found"
-          exit 1
-        fi
     
-    - name: Start services with Docker Compose
+    - name: Create necessary directories
       run: |
-        cd docker
-        docker-compose up -d
+        mkdir -p docker/config
+        mkdir -p docker/data
+        mkdir -p docker/plugins
+        mkdir -p docker/extensions
+    
+    - name: Pull and start services with Docker
+      run: |
+        # Pull the pre-built image
+        docker pull ghcr.io/sillytavern/sillytavern:latest
+        
+        # Stop and remove existing container if it exists
+        docker stop sillytavern || true
+        docker rm sillytavern || true
+        
+        # Run the container with the same configuration as in docker-compose.yml
+        docker run -d \
+          --name sillytavern \
+          --hostname sillytavern \
+          -e NODE_ENV=production \
+          -e FORCE_COLOR=1 \
+          -p 8000:8000 \
+          -v $(pwd)/docker/config:/home/node/app/config \
+          -v $(pwd)/docker/data:/home/node/app/data \
+          -v $(pwd)/docker/plugins:/home/node/app/plugins \
+          -v $(pwd)/docker/extensions:/home/node/app/public/scripts/extensions/third-party \
+          --restart unless-stopped \
+          ghcr.io/sillytavern/sillytavern:latest
     
     - name: Wait for services to be ready
       run: |
-        cd docker
-        timeout 300 bash -c 'until docker-compose exec -T sillytavern echo "Service is ready"; do sleep 5; done' || echo "Service initialization completed"
+        timeout 300 bash -c 'until docker exec -T sillytavern echo "Service is ready"; do sleep 5; done' || echo "Service initialization completed"
     
     - name: Check service status
       run: |
-        cd docker
-        docker-compose ps
-        docker-compose logs --tail=20 sillytavern
+        docker ps | grep sillytavern
+        docker logs --tail=20 sillytavern
     
     - name: Test service endpoint
       run: |
