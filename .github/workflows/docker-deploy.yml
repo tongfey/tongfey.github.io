@@ -33,19 +33,16 @@ jobs:
     
     - name: Build and start services with Docker Compose
       run: |
-        cd docker
-        docker-compose up -d --build
+        docker-compose -f docker/docker-compose.yml up -d --build
     
     - name: Wait for services to be ready
       run: |
-        cd docker
-        timeout 60 bash -c 'until docker-compose exec -T sillytavern echo "Service is ready"; do sleep 5; done' || echo "Service check completed"
+        timeout 60 bash -c 'until docker-compose -f docker/docker-compose.yml exec -T sillytavern echo "Service is ready"; do sleep 5; done' || echo "Service check completed"
     
     - name: Check service status
       run: |
-        cd docker
-        docker-compose ps
-        docker-compose logs --tail=50 sillytavern
+        docker-compose -f docker/docker-compose.yml ps
+        docker-compose -f docker/docker-compose.yml logs --tail=50 sillytavern
     
     - name: Test service endpoint
       run: |
@@ -55,5 +52,4 @@ jobs:
     - name: Cleanup
       if: always()
       run: |
-        cd docker
-        docker-compose down
+        docker-compose -f docker/docker-compose.yml down
