@@ -19,6 +19,9 @@ jobs:
     - name: Set up Docker
       uses: docker/setup-buildx-action@v3    
     
+    - name: Get IP address
+      run: echo "IP_ADDRESS=$(hostname -I | awk '{print $1}')" >> $GITHUB_ENV
+    
     - name: Create necessary directories
       run: |
         mkdir -p docker/config
